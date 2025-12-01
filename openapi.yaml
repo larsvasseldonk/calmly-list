@@ -1,0 +1,160 @@
+openapi: 3.0.0
+info:
+  title: Calmly List API
+  description: Backend API for the Calmly List Todo application.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+paths:
+  /todos:
+    get:
+      summary: Get all todos
+      operationId: getTodos
+      responses:
+        '200':
+          description: A list of todos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Todo'
+    post:
+      summary: Create a new todo
+      operationId: createTodo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TodoCreate'
+      responses:
+        '201':
+          description: The created todo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+  /todos/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      summary: Update a todo
+      operationId: updateTodo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TodoUpdate'
+      responses:
+        '200':
+          description: The updated todo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '404':
+          description: Todo not found
+    delete:
+      summary: Delete a todo
+      operationId: deleteTodo
+      responses:
+        '204':
+          description: Todo deleted successfully
+        '404':
+          description: Todo not found
+  /todos/completed:
+    delete:
+      summary: Delete all completed todos
+      operationId: deleteCompletedTodos
+      responses:
+        '204':
+          description: Completed todos deleted successfully
+
+components:
+  schemas:
+    Todo:
+      type: object
+      required:
+        - id
+        - text
+        - completed
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        text:
+          type: string
+          example: "Buy groceries"
+        completed:
+          type: boolean
+          example: false
+        createdAt:
+          type: integer
+          format: int64
+          description: Timestamp in milliseconds
+          example: 1678886400000
+        dueDate:
+          type: integer
+          format: int64
+          nullable: true
+          description: Timestamp in milliseconds
+          example: 1679491200000
+        priority:
+          type: string
+          enum: [low, medium, high]
+          nullable: true
+          example: "medium"
+        category:
+          type: string
+          nullable: true
+          example: "Personal"
+
+    TodoCreate:
+      type: object
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          example: "Buy groceries"
+        dueDate:
+          type: integer
+          format: int64
+          nullable: true
+          description: Timestamp in milliseconds
+        priority:
+          type: string
+          enum: [low, medium, high]
+          nullable: true
+        category:
+          type: string
+          nullable: true
+
+    TodoUpdate:
+      type: object
+      properties:
+        text:
+          type: string
+        completed:
+          type: boolean
+        dueDate:
+          type: integer
+          format: int64
+          nullable: true
+        priority:
+          type: string
+          enum: [low, medium, high]
+          nullable: true
+        category:
+          type: string
+          nullable: true
