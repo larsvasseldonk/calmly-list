@@ -9,6 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2, CheckCircle2, Circle, CalendarIcon, Search, Tag, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import axios from "axios";
+
+const API_URL = "http://localhost:8000/todos";
 
 type Priority = "low" | "medium" | "high";
 
@@ -33,58 +36,83 @@ export const TodoApp = () => {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [dueDate, setDueDate] = useState<Date | undefined>();
 
-  useEffect(() => {
-    const stored = localStorage.getItem("todos");
-    if (stored) {
-      setTodos(JSON.parse(stored));
+  const fetchTodos = async () => {
+    try {
+      const response = await axios.get(API_URL);
+      setTodos(response.data);
+    } catch (error) {
+      console.error("Error fetching todos:", error);
     }
+  };
+
+  useEffect(() => {
+    fetchTodos();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem("todos", JSON.stringify(todos));
-  }, [todos]);
-
-  const addTodo = () => {
+  const addTodo = async () => {
     if (inputValue.trim()) {
-      const newTodo: Todo = {
-        id: Date.now().toString(),
+      const newTodo = {
         text: inputValue.trim(),
-        completed: false,
-        createdAt: Date.now(),
         dueDate: dueDate ? dueDate.getTime() : null,
         priority: selectedPriority,
         category: selectedCategory.trim() || null,
       };
-      setTodos([newTodo, ...todos]);
-      setInputValue("");
-      setSelectedPriority(null);
-      setSelectedCategory("");
-      setDueDate(undefined);
+
+      try {
+        const response = await axios.post(API_URL, newTodo);
+        setTodos([...todos, response.data]);
+        setInputValue("");
+        setSelectedPriority(null);
+        setSelectedCategory("");
+        setDueDate(undefined);
+      } catch (error) {
+        console.error("Error adding todo:", error);
+      }
     }
   };
 
-  const toggleTodo = (id: string) => {
-    setTodos(
-      todos.map((todo) =>
-        todo.id === id ? { ...todo, completed: !todo.completed } : todo
-      )
-    );
+  const toggleTodo = async (id: string) => {
+    const todo = todos.find((t) => t.id === id);
+    if (!todo) return;
+
+    try {
+      const response = await axios.patch(`${API_URL}/${id}`, {
+        completed: !todo.completed,
+      });
+      setTodos(todos.map((t) => (t.id === id ? response.data : t)));
+    } catch (error) {
+      console.error("Error updating todo:", error);
+    }
   };
 
-  const deleteTodo = (id: string) => {
-    setTodos(todos.filter((todo) => todo.id !== id));
+  const deleteTodo = async (id: string) => {
+    try {
+      await axios.delete(`${API_URL}/${id}`);
+      setTodos(todos.filter((todo) => todo.id !== id));
+    } catch (error) {
+      console.error("Error deleting todo:", error);
+    }
+  };
+
+  const clearCompleted = async () => {
+    try {
+      await axios.delete(`${API_URL}/completed`);
+      setTodos(todos.filter((t) => !t.completed));
+    } catch (error) {
+      console.error("Error clearing completed todos:", error);
+    }
   };
 
   const filteredTodos = todos.filter((todo) => {
     // Filter by completion status
     if (filter === "active" && todo.completed) return false;
     if (filter === "completed" && !todo.completed) return false;
-    
+
     // Filter by search query
     if (searchQuery && !todo.text.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
     }
-    
+
     return true;
   });
 
@@ -143,7 +171,7 @@ export const TodoApp = () => {
               onKeyDown={(e) => e.key === "Enter" && addTodo()}
               className="transition-all duration-200 focus:ring-2 focus:ring-primary"
             />
-            
+
             <div className="flex flex-wrap gap-2">
               <Popover>
                 <PopoverTrigger asChild>
@@ -224,8 +252,8 @@ export const TodoApp = () => {
                   {filter === "completed"
                     ? "No completed tasks yet"
                     : filter === "active"
-                    ? "No active tasks"
-                    : "No tasks yet. Add one above!"}
+                      ? "No active tasks"
+                      : "No tasks yet. Add one above!"}
                 </p>
               </div>
             ) : (
@@ -257,7 +285,7 @@ export const TodoApp = () => {
                       >
                         {todo.text}
                       </label>
-                      
+
                       <div className="flex flex-wrap gap-2 text-xs">
                         {todo.priority && (
                           <Badge variant="secondary" className={cn("capitalize", getPriorityColor(todo.priority))}>
@@ -272,11 +300,11 @@ export const TodoApp = () => {
                           </Badge>
                         )}
                         {todo.dueDate && (
-                          <Badge 
-                            variant="secondary" 
+                          <Badge
+                            variant="secondary"
                             className={cn(
-                              isOverdue(todo.dueDate) && !todo.completed 
-                                ? "bg-red-500/10 text-red-500" 
+                              isOverdue(todo.dueDate) && !todo.completed
+                                ? "bg-red-500/10 text-red-500"
                                 : "bg-secondary text-muted-foreground"
                             )}
                           >
@@ -308,7 +336,7 @@ export const TodoApp = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setTodos(todos.filter((t) => !t.completed))}
+                onClick={clearCompleted}
                 className="hover:text-destructive transition-colors duration-200"
               >
                 Clear completed

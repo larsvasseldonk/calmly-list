@@ -3,11 +3,11 @@
     "version": "1.0.0",
     "description": "Calmly List Application",
     "scripts": {
-        "dev:frontend": "npm run dev --prefix frontend",
-        "dev:backend": "cd backend && uv run uvicorn app.main:app --reload",
-        "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\""
+        "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+        "dev:backend": "cd backend && uv run python manage.py runserver",
+        "dev:frontend": "cd frontend && npm run dev"
     },
     "devDependencies": {
-        "concurrently": "^9.1.0"
+        "concurrently": "^9.2.1"
     }
 }
