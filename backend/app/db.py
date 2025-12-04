@@ -1,58 +1,115 @@
 from typing import List, Optional
+from sqlalchemy.orm import Session
 from app.models import Todo, TodoCreate, TodoUpdate
+from app.schema import TodoModel
 import time
 import uuid
 
-# Mock database
-db: List[Todo] = []
 
-def get_todos() -> List[Todo]:
-    return db
+def get_todos(db: Session) -> List[Todo]:
+    """Get all todos from the database"""
+    db_todos = db.query(TodoModel).all()
+    return [
+        Todo(
+            id=todo.id,
+            text=todo.text,
+            completed=todo.completed,
+            createdAt=todo.created_at,
+            dueDate=todo.due_date,
+            priority=todo.priority,
+            category=todo.category
+        )
+        for todo in db_todos
+    ]
 
-def get_todo(todo_id: str) -> Optional[Todo]:
-    for todo in db:
-        if todo.id == todo_id:
-            return todo
-    return None
 
-def create_todo(todo_create: TodoCreate) -> Todo:
-    new_todo = Todo(
+def get_todo(db: Session, todo_id: str) -> Optional[Todo]:
+    """Get a single todo by ID"""
+    db_todo = db.query(TodoModel).filter(TodoModel.id == todo_id).first()
+    if not db_todo:
+        return None
+    
+    return Todo(
+        id=db_todo.id,
+        text=db_todo.text,
+        completed=db_todo.completed,
+        createdAt=db_todo.created_at,
+        dueDate=db_todo.due_date,
+        priority=db_todo.priority,
+        category=db_todo.category
+    )
+
+
+def create_todo(db: Session, todo_create: TodoCreate) -> Todo:
+    """Create a new todo in the database"""
+    db_todo = TodoModel(
         id=str(uuid.uuid4()),
         text=todo_create.text,
         completed=False,
-        createdAt=int(time.time() * 1000),
-        dueDate=todo_create.dueDate,
-        priority=todo_create.priority,
+        created_at=int(time.time() * 1000),
+        due_date=todo_create.dueDate,
+        priority=todo_create.priority.value if todo_create.priority else None,
         category=todo_create.category
     )
-    db.append(new_todo)
-    return new_todo
+    db.add(db_todo)
+    db.commit()
+    db.refresh(db_todo)
+    
+    return Todo(
+        id=db_todo.id,
+        text=db_todo.text,
+        completed=db_todo.completed,
+        createdAt=db_todo.created_at,
+        dueDate=db_todo.due_date,
+        priority=db_todo.priority,
+        category=db_todo.category
+    )
 
-def update_todo(todo_id: str, todo_update: TodoUpdate) -> Optional[Todo]:
-    todo = get_todo(todo_id)
-    if not todo:
+
+def update_todo(db: Session, todo_id: str, todo_update: TodoUpdate) -> Optional[Todo]:
+    """Update an existing todo"""
+    db_todo = db.query(TodoModel).filter(TodoModel.id == todo_id).first()
+    if not db_todo:
         return None
     
     update_data = todo_update.model_dump(exclude_unset=True)
-    updated_todo = todo.model_copy(update=update_data)
     
-    # Replace in db
-    for i, t in enumerate(db):
-        if t.id == todo_id:
-            db[i] = updated_todo
-            break
-            
-    return updated_todo
+    # Map Pydantic field names to database column names
+    if 'dueDate' in update_data:
+        update_data['due_date'] = update_data.pop('dueDate')
+    if 'priority' in update_data and update_data['priority'] is not None:
+        update_data['priority'] = update_data['priority'].value
+    
+    for key, value in update_data.items():
+        setattr(db_todo, key, value)
+    
+    db.commit()
+    db.refresh(db_todo)
+    
+    return Todo(
+        id=db_todo.id,
+        text=db_todo.text,
+        completed=db_todo.completed,
+        createdAt=db_todo.created_at,
+        dueDate=db_todo.due_date,
+        priority=db_todo.priority,
+        category=db_todo.category
+    )
 
-def delete_todo(todo_id: str) -> bool:
-    for i, todo in enumerate(db):
-        if todo.id == todo_id:
-            db.pop(i)
-            return True
-    return False
 
-def delete_completed_todos() -> int:
-    global db
-    initial_count = len(db)
-    db = [todo for todo in db if not todo.completed]
-    return initial_count - len(db)
+def delete_todo(db: Session, todo_id: str) -> bool:
+    """Delete a todo by ID"""
+    db_todo = db.query(TodoModel).filter(TodoModel.id == todo_id).first()
+    if not db_todo:
+        return False
+    
+    db.delete(db_todo)
+    db.commit()
+    return True
+
+
+def delete_completed_todos(db: Session) -> int:
+    """Delete all completed todos and return count deleted"""
+    result = db.query(TodoModel).filter(TodoModel.completed == True).delete()
+    db.commit()
+    return result

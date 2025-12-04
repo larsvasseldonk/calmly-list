@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import router
+from app.database import init_db
 
 app = FastAPI(
     title="Calmly List API",
@@ -16,5 +17,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Initialize database on startup
+@app.on_event("startup")
+def startup_event():
+    init_db()
 
 app.include_router(router)

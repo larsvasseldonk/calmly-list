@@ -1,19 +1,9 @@
-from fastapi.testclient import TestClient
-from app.main import app
-from app import db
-
-client = TestClient(app)
-
-def setup_function():
-    # Clear database before each test
-    db.db.clear()
-
-def test_get_todos_empty():
+def test_get_todos_empty(client):
     response = client.get("/todos")
     assert response.status_code == 200
     assert response.json() == []
 
-def test_create_todo():
+def test_create_todo(client):
     response = client.post(
         "/todos",
         json={"text": "Test todo"}
@@ -25,7 +15,7 @@ def test_create_todo():
     assert "createdAt" in data
     assert data["completed"] is False
 
-def test_get_todos_with_data():
+def test_get_todos_with_data(client):
     client.post("/todos", json={"text": "Todo 1"})
     client.post("/todos", json={"text": "Todo 2"})
     
@@ -33,7 +23,7 @@ def test_get_todos_with_data():
     assert response.status_code == 200
     assert len(response.json()) == 2
 
-def test_update_todo():
+def test_update_todo(client):
     # Create a todo
     create_response = client.post("/todos", json={"text": "Original text"})
     todo_id = create_response.json()["id"]
@@ -52,7 +42,7 @@ def test_update_todo():
     get_response = client.get("/todos")
     assert get_response.json()[0]["text"] == "Updated text"
 
-def test_delete_todo():
+def test_delete_todo(client):
     # Create a todo
     create_response = client.post("/todos", json={"text": "To delete"})
     todo_id = create_response.json()["id"]
@@ -65,7 +55,7 @@ def test_delete_todo():
     get_response = client.get("/todos")
     assert len(get_response.json()) == 0
 
-def test_delete_completed_todos():
+def test_delete_completed_todos(client):
     # Create todos
     client.post("/todos", json={"text": "Active 1"})
     
