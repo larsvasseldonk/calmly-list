@@ -7,10 +7,60 @@ servers:
   - url: http://localhost:8000
     description: Local development server
 paths:
+  /register:
+    post:
+      summary: Register a new user
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Email already registered
+  /login:
+    post:
+      summary: Login for access token
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                  description: User email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+        '401':
+          description: Incorrect email or password
   /todos:
     get:
       summary: Get all todos
       operationId: getTodos
+      security:
+        - OAuth2PasswordBearer: []
       responses:
         '200':
           description: A list of todos
@@ -23,6 +73,8 @@ paths:
     post:
       summary: Create a new todo
       operationId: createTodo
+      security:
+        - OAuth2PasswordBearer: []
       requestBody:
         required: true
         content:
@@ -47,6 +99,8 @@ paths:
     patch:
       summary: Update a todo
       operationId: updateTodo
+      security:
+        - OAuth2PasswordBearer: []
       requestBody:
         required: true
         content:
@@ -65,6 +119,8 @@ paths:
     delete:
       summary: Delete a todo
       operationId: deleteTodo
+      security:
+        - OAuth2PasswordBearer: []
       responses:
         '204':
           description: Todo deleted successfully
@@ -74,12 +130,55 @@ paths:
     delete:
       summary: Delete all completed todos
       operationId: deleteCompletedTodos
+      security:
+        - OAuth2PasswordBearer: []
       responses:
         '204':
           description: Completed todos deleted successfully
 
 components:
+  securitySchemes:
+    OAuth2PasswordBearer:
+      type: oauth2
+      flows:
+        password:
+          tokenUrl: login
+          scopes: {}
   schemas:
+    UserCreate:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    UserResponse:
+      type: object
+      required:
+        - id
+        - email
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+    Token:
+      type: object
+      required:
+        - access_token
+        - token_type
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
     Todo:
       type: object
       required:
@@ -118,6 +217,10 @@ components:
           type: string
           nullable: true
           example: "Personal"
+        user_id:
+          type: string
+          format: uuid
+          nullable: true
 
     TodoCreate:
       type: object
