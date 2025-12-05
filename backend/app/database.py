@@ -2,13 +2,17 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 import os
 
-# SQLite database URL - can be overridden for testing
+# Database URL - can be overridden for testing or Docker
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./todos.db")
 
-# Create engine with SQLite-specific settings
+# Create engine
+connect_args = {}
+if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
+    connect_args = {"check_same_thread": False}
+
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, 
-    connect_args={"check_same_thread": False}  # Required for SQLite
+    connect_args=connect_args
 )
 
 # Create SessionLocal class for database sessions

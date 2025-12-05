@@ -61,7 +61,19 @@ A modern, full-stack Todo application built with React, FastAPI, and SQLite.
    cd ..
    ```
 
-### Running the Application
+### Running with Docker (Recommended)
+
+The easiest way to run the application is using Docker Compose. This will set up the frontend, backend, and a PostgreSQL database.
+
+```bash
+docker compose up --build
+```
+
+- **Frontend**: http://localhost:8080
+- **Backend API**: http://localhost:8000
+- **API Documentation**: http://localhost:8000/docs
+
+### Running Locally (Development)
 
 You can run both the frontend and backend concurrently from the root directory:
 
