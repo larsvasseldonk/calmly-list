@@ -24,7 +24,8 @@ const Login = () => {
             formData.append('username', email);
             formData.append('password', password);
 
-            const response = await fetch('http://localhost:8000/login', {
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+            const response = await fetch(`${API_URL}/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',

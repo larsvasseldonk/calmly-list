@@ -1,13 +1,54 @@
+# Dependencies
 node_modules
 .venv
+
+# Python
 __pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# Version control
 .git
 .gitignore
+
+# Databases
 *.db
 *.db-shm
 *.db-wal
+
+# Logs
 backend.log
+*.log
+
+# Build outputs
 dist
 build
+
+# Testing
 coverage
 .pytest_cache
+*.coverage
+
+# IDE
+.vscode
+.idea
+
+# Environment
+.env
+.env.local
+
+# Frontend dev
+frontend/node_modules
+frontend/dist
+frontend/.vite
+
+# Backend dev
+backend/__pycache__
+backend/.venv
+
+# Docker
+.dockerignore
+docker-compose.yml
+backend/Dockerfile
+frontend/Dockerfile

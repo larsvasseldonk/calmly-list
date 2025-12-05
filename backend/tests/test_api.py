@@ -119,3 +119,94 @@ def test_delete_completed_todos(client):
     todos = get_response.json()
     assert len(todos) == 1
     assert todos[0]["text"] == "Active 1"
+
+def test_login_invalid_email(client):
+    """Test login with invalid email"""
+    create_test_user(client)
+    response = client.post(
+        "/login",
+        data={"username": "wrong@example.com", "password": "password123"}
+    )
+    assert response.status_code == 401
+    assert "Incorrect email or password" in response.json()["detail"]
+
+
+def test_login_invalid_password(client):
+    """Test login with invalid password"""
+    create_test_user(client)
+    response = client.post(
+        "/login",
+        data={"username": "test@example.com", "password": "wrongpassword"}
+    )
+    assert response.status_code == 401
+    assert "Incorrect email or password" in response.json()["detail"]
+
+
+def test_register_duplicate_email(client):
+    """Test that registering with duplicate email fails"""
+    create_test_user(client)
+    response = client.post(
+        "/register",
+        json={"email": "test@example.com", "password": "password456"}
+    )
+    assert response.status_code == 400
+    assert "Email already registered" in response.json()["detail"]
+
+
+def test_access_todos_without_token(client):
+    """Test that accessing protected route without token fails"""
+    response = client.get("/todos")
+    assert response.status_code == 401
+
+
+def test_access_todos_with_invalid_token(client):
+    """Test that accessing protected route with invalid token fails"""
+    headers = {"Authorization": "Bearer invalid_token_here"}
+    response = client.get("/todos", headers=headers)
+    assert response.status_code == 401
+
+
+def test_create_todo_without_token(client):
+    """Test that creating todo without token fails"""
+    response = client.post("/todos", json={"text": "Test todo"})
+    assert response.status_code == 401
+
+
+def test_token_isolation_between_users(client):
+    """Test that users can only access their own todos"""
+    # Create first user
+    create_test_user(client)
+    token1 = get_auth_token(client)
+    headers1 = {"Authorization": f"Bearer {token1}"}
+    
+    # Create second user
+    response = client.post(
+        "/register",
+        json={"email": "user2@example.com", "password": "password123"}
+    )
+    assert response.status_code == 201
+    
+    response = client.post(
+        "/login",
+        data={"username": "user2@example.com", "password": "password123"}
+    )
+    token2 = response.json()["access_token"]
+    headers2 = {"Authorization": f"Bearer {token2}"}
+    
+    # User 1 creates a todo
+    client.post("/todos", json={"text": "User 1 todo"}, headers=headers1)
+    
+    # User 2 creates a todo
+    client.post("/todos", json={"text": "User 2 todo"}, headers=headers2)
+    
+    # User 1 should only see their todo
+    response = client.get("/todos", headers=headers1)
+    todos = response.json()
+    assert len(todos) == 1
+    assert todos[0]["text"] == "User 1 todo"
+    
+    # User 2 should only see their todo
+    response = client.get("/todos", headers=headers2)
+    todos = response.json()
+    assert len(todos) == 1
+    assert todos[0]["text"] == "User 2 todo"

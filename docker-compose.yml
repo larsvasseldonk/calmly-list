@@ -13,26 +13,19 @@ services:
       timeout: 5s
       retries: 5
 
-  backend:
-    build: ./backend
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/calmlylist
       - SECRET_KEY=your_secret_key_here
+      - DJANGO_SETTINGS_MODULE=app.settings
     depends_on:
       db:
         condition: service_healthy
     ports:
-      - "8000:8000"
-
-  frontend:
-    build:
-      context: ./frontend
-      args:
-        - VITE_API_URL=/api
-    ports:
-      - "8080:80"
-    depends_on:
-      - backend
+      - "80:80"
 
 volumes:
   postgres_data:
