@@ -2,7 +2,7 @@ import pytest
 from sqlalchemy import create_engine
 
 from app.database import configure_test_db, SessionLocal, Base
-from app.schema import TodoModel  # Import to register model
+from app.schema import TodoModel, User  # Import to register models
 from fastapi.testclient import TestClient
 from app.main import app
 
@@ -16,6 +16,7 @@ def setup_test_database():
         SQLALCHEMY_TEST_DATABASE_URL,
         connect_args={"check_same_thread": False}
     )
+    print(f"DEBUG: setup_test_database calling configure_test_db. Tables: {Base.metadata.tables.keys()}")
     configure_test_db(test_engine)
     yield
     
@@ -25,6 +26,7 @@ def clear_db():
     db = SessionLocal()
     try:
         db.query(TodoModel).delete()
+        db.query(User).delete()
         db.commit()
     finally:
         db.close()

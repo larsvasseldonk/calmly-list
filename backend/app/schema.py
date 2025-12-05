@@ -1,6 +1,16 @@
-from sqlalchemy import Column, String, Boolean, Integer
+from sqlalchemy import Column, String, Boolean, Integer, ForeignKey
+from sqlalchemy.orm import relationship
 from app.database import Base
 import uuid
+
+class User(Base):
+    __tablename__ = "users"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    email = Column(String, unique=True, index=True, nullable=False)
+    password_hash = Column(String, nullable=False)
+    
+    todos = relationship("TodoModel", back_populates="owner")
 
 class TodoModel(Base):
     """SQLAlchemy model for Todo items"""
@@ -13,3 +23,6 @@ class TodoModel(Base):
     due_date = Column(Integer, nullable=True)  # Timestamp in milliseconds
     priority = Column(String, nullable=True)  # "low", "medium", "high"
     category = Column(String, nullable=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=True)
+    
+    owner = relationship("User", back_populates="todos")

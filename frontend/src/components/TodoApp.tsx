@@ -6,9 +6,12 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, CheckCircle2, Circle, CalendarIcon, Search, Tag, AlertCircle } from "lucide-react";
+import { Trash2, CheckCircle2, Circle, CalendarIcon, Search, Tag, AlertCircle, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { api } from "@/api/client";
+import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
 
 type Priority = "low" | "medium" | "high";
 
@@ -32,63 +35,106 @@ export const TodoApp = () => {
   const [selectedPriority, setSelectedPriority] = useState<Priority | null>(null);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [dueDate, setDueDate] = useState<Date | undefined>();
+  const { logout, user } = useAuth();
+  const { toast } = useToast();
+
+  const fetchTodos = async () => {
+    try {
+      const data = await api.get('/todos');
+      setTodos(data);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch todos",
+      });
+    }
+  };
 
   useEffect(() => {
-    const stored = localStorage.getItem("todos");
-    if (stored) {
-      setTodos(JSON.parse(stored));
-    }
+    fetchTodos();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem("todos", JSON.stringify(todos));
-  }, [todos]);
-
-  const addTodo = () => {
+  const addTodo = async () => {
     if (inputValue.trim()) {
-      const newTodo: Todo = {
-        id: Date.now().toString(),
-        text: inputValue.trim(),
-        completed: false,
-        createdAt: Date.now(),
-        dueDate: dueDate ? dueDate.getTime() : null,
-        priority: selectedPriority,
-        category: selectedCategory.trim() || null,
-      };
-      setTodos([newTodo, ...todos]);
-      setInputValue("");
-      setSelectedPriority(null);
-      setSelectedCategory("");
-      setDueDate(undefined);
+      try {
+        const newTodo = await api.post('/todos', {
+          text: inputValue.trim(),
+          dueDate: dueDate ? dueDate.getTime() : null,
+          priority: selectedPriority,
+          category: selectedCategory.trim() || null,
+        });
+        setTodos([newTodo, ...todos]);
+        setInputValue("");
+        setSelectedPriority(null);
+        setSelectedCategory("");
+        setDueDate(undefined);
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to create todo",
+        });
+      }
     }
   };
 
-  const toggleTodo = (id: string) => {
-    setTodos(
-      todos.map((todo) =>
-        todo.id === id ? { ...todo, completed: !todo.completed } : todo
-      )
-    );
+  const toggleTodo = async (id: string) => {
+    const todo = todos.find(t => t.id === id);
+    if (!todo) return;
+
+    try {
+      const updatedTodo = await api.patch(`/todos/${id}`, {
+        completed: !todo.completed
+      });
+      setTodos(todos.map((t) => (t.id === id ? updatedTodo : t)));
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update todo",
+      });
+    }
   };
 
-  const deleteTodo = (id: string) => {
-    setTodos(todos.filter((todo) => todo.id !== id));
+  const deleteTodo = async (id: string) => {
+    try {
+      await api.delete(`/todos/${id}`);
+      setTodos(todos.filter((todo) => todo.id !== id));
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete todo",
+      });
+    }
+  };
+
+  const clearCompleted = async () => {
+    try {
+      await api.delete('/todos/completed');
+      setTodos(todos.filter((t) => !t.completed));
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to clear completed todos",
+      });
+    }
   };
 
   const filteredTodos = todos.filter((todo) => {
     // Filter by completion status
     if (filter === "active" && todo.completed) return false;
     if (filter === "completed" && !todo.completed) return false;
-    
+
     // Filter by search query
     if (searchQuery && !todo.text.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
     }
-    
+
     return true;
   });
-
-  const categories = Array.from(new Set(todos.filter(t => t.category).map(t => t.category)));
 
   const getPriorityColor = (priority: Priority | null) => {
     switch (priority) {
@@ -109,6 +155,12 @@ export const TodoApp = () => {
   return (
     <div className="min-h-screen bg-gradient-app py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto">
+        <div className="flex justify-end mb-4">
+          <Button variant="ghost" onClick={logout} className="text-muted-foreground hover:text-destructive">
+            <LogOut className="w-4 h-4 mr-2" />
+            Logout
+          </Button>
+        </div>
         <div className="text-center mb-8 animate-fade-in">
           <h1 className="text-4xl sm:text-5xl font-bold text-foreground mb-2">
             My Tasks
@@ -143,7 +195,7 @@ export const TodoApp = () => {
               onKeyDown={(e) => e.key === "Enter" && addTodo()}
               className="transition-all duration-200 focus:ring-2 focus:ring-primary"
             />
-            
+
             <div className="flex flex-wrap gap-2">
               <Popover>
                 <PopoverTrigger asChild>
@@ -224,8 +276,8 @@ export const TodoApp = () => {
                   {filter === "completed"
                     ? "No completed tasks yet"
                     : filter === "active"
-                    ? "No active tasks"
-                    : "No tasks yet. Add one above!"}
+                      ? "No active tasks"
+                      : "No tasks yet. Add one above!"}
                 </p>
               </div>
             ) : (
@@ -257,7 +309,7 @@ export const TodoApp = () => {
                       >
                         {todo.text}
                       </label>
-                      
+
                       <div className="flex flex-wrap gap-2 text-xs">
                         {todo.priority && (
                           <Badge variant="secondary" className={cn("capitalize", getPriorityColor(todo.priority))}>
@@ -272,11 +324,11 @@ export const TodoApp = () => {
                           </Badge>
                         )}
                         {todo.dueDate && (
-                          <Badge 
-                            variant="secondary" 
+                          <Badge
+                            variant="secondary"
                             className={cn(
-                              isOverdue(todo.dueDate) && !todo.completed 
-                                ? "bg-red-500/10 text-red-500" 
+                              isOverdue(todo.dueDate) && !todo.completed
+                                ? "bg-red-500/10 text-red-500"
                                 : "bg-secondary text-muted-foreground"
                             )}
                           >
@@ -308,7 +360,7 @@ export const TodoApp = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setTodos(todos.filter((t) => !t.completed))}
+                onClick={clearCompleted}
                 className="hover:text-destructive transition-colors duration-200"
               >
                 Clear completed

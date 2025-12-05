@@ -15,16 +15,31 @@ Install dependencies:
 uv sync
 ```
 
-## Running the Server
+## Running the Application
 
-Start the development server:
+You can run both the frontend and backend concurrently from the root directory:
 
 ```bash
+npm run dev
+```
+
+- Frontend: `http://localhost:8080`
+- Backend API: `http://localhost:8000`
+- API Docs: `http://localhost:8000/docs`
+
+### Running Individually
+
+To run just the backend:
+```bash
+cd backend
 uv run uvicorn app.main:app --reload
 ```
 
-The API will be available at `http://localhost:8000`.
-Interactive API documentation is available at `http://localhost:8000/docs`.
+To run just the frontend:
+```bash
+cd frontend
+npm run dev
+```
 
 ## Database
 

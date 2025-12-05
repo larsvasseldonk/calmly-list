@@ -34,5 +34,6 @@ def init_db():
 def configure_test_db(test_engine):
     """Reconfigure the database to use a test engine"""
     global SessionLocal
+    print(f"DEBUG: Configuring test DB. Tables: {Base.metadata.tables.keys()}")
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
     Base.metadata.create_all(bind=test_engine)

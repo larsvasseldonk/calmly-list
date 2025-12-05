@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.database import configure_test_db, SessionLocal, Base
-from app.schema import TodoModel
+from app.schema import TodoModel, User
 
 # Use a file-based SQLite database for integration tests to ensure persistence behavior matches production
 # and to avoid some in-memory specific issues.
@@ -40,6 +40,7 @@ def clear_db():
     db = SessionLocal()
     try:
         db.query(TodoModel).delete()
+        db.query(User).delete()
         db.commit()
     finally:
         db.close()

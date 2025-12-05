@@ -27,5 +27,21 @@ class Todo(TodoBase):
     id: str
     completed: bool
     createdAt: int = Field(..., description="Timestamp in milliseconds")
+    user_id: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+class UserBase(BaseModel):
+    email: str
+
+class UserCreate(UserBase):
+    password: str
+
+class UserResponse(UserBase):
+    id: str
+    
+    model_config = ConfigDict(from_attributes=True)
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
